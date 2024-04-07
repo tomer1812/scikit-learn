@@ -58,6 +58,7 @@ cdef class Splitter:
         Criterion criterion,
         intp_t max_features,
         intp_t min_samples_leaf,
+        intp_t min_observed_leaf,
         float64_t min_weight_leaf,
         object random_state,
         const int8_t[:] monotonic_cst,
@@ -75,6 +76,11 @@ cdef class Splitter:
         min_samples_leaf : intp_t
             The minimal number of samples each leaf can have, where splits
             which would result in having less samples in a leaf are not
+            considered.
+
+        min_observed_leaf : intp_t
+            The minimal number of samples with observed events each leaf can have, where splits
+            which would result in having less samples with observed events in a leaf are not
             considered.
 
         min_weight_leaf : float64_t
@@ -96,6 +102,7 @@ cdef class Splitter:
 
         self.max_features = max_features
         self.min_samples_leaf = min_samples_leaf
+        self.min_observed_leaf = min_observed_leaf
         self.min_weight_leaf = min_weight_leaf
         self.random_state = random_state
         self.monotonic_cst = monotonic_cst
@@ -111,6 +118,7 @@ cdef class Splitter:
         return (type(self), (self.criterion,
                              self.max_features,
                              self.min_samples_leaf,
+                             self.min_observed_leaf,
                              self.min_weight_leaf,
                              self.random_state,
                              self.monotonic_cst), self.__getstate__())
@@ -318,6 +326,7 @@ cdef inline int node_split_best(
     cdef bint has_missing = 0
     cdef intp_t n_searches
     cdef intp_t n_left, n_right
+    cdef intp_t n_observed_left, n_observed_right
     cdef bint missing_go_to_left
 
     cdef intp_t[::1] samples = splitter.samples
@@ -328,6 +337,7 @@ cdef inline int node_split_best(
     cdef float32_t[::1] feature_values = splitter.feature_values
     cdef intp_t max_features = splitter.max_features
     cdef intp_t min_samples_leaf = splitter.min_samples_leaf
+    cdef intp_t min_observed_leaf = splitter.min_observed_leaf
     cdef float64_t min_weight_leaf = splitter.min_weight_leaf
     cdef uint32_t* random_state = &splitter.rand_r_state
 
@@ -452,6 +462,12 @@ cdef inline int node_split_best(
                 # Reject if min_samples_leaf is not guaranteed
                 if n_left < min_samples_leaf or n_right < min_samples_leaf:
                     continue
+
+                with gil:
+                    n_observed_left, n_observed_right = criterion.get_observed_events(current_split.pos)
+
+                    if n_observed_left < min_observed_leaf or n_observed_right < min_observed_leaf:
+                        continue
 
                 current_split.pos = p
                 criterion.update(current_split.pos)
@@ -700,6 +716,8 @@ cdef inline int node_split_random(
 
     cdef intp_t max_features = splitter.max_features
     cdef intp_t min_samples_leaf = splitter.min_samples_leaf
+    cdef intp_t min_observed_leaf = splitter.min_observed_leaf
+    cdef intp_t n_observed_left, n_observed_right
     cdef float64_t min_weight_leaf = splitter.min_weight_leaf
     cdef uint32_t* random_state = &splitter.rand_r_state
 
@@ -799,6 +817,12 @@ cdef inline int node_split_random(
         if (((current_split.pos - start) < min_samples_leaf) or
                 ((end - current_split.pos) < min_samples_leaf)):
             continue
+
+        with gil:
+            n_observed_left, n_observed_right = criterion.get_observed_events(current_split.pos)
+
+            if n_observed_left < min_observed_leaf or n_observed_right < min_observed_leaf:
+                continue
 
         # Evaluate split
         # At this point, the criterion has a view into the samples that was partitioned

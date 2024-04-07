@@ -93,6 +93,7 @@ cdef class TreeBuilder:
 
     cdef intp_t min_samples_split       # Minimum number of samples in an internal node
     cdef intp_t min_samples_leaf        # Minimum number of samples in a leaf
+    cdef intp_t min_observed_leaf        # Minimum number of samples in a leaf
     cdef float64_t min_weight_leaf         # Minimum weight in a leaf
     cdef intp_t max_depth               # Maximal tree depth
     cdef float64_t min_impurity_decrease   # Impurity threshold for early stopping

@@ -154,11 +154,12 @@ cdef class DepthFirstTreeBuilder(TreeBuilder):
     """Build a decision tree in depth-first fashion."""
 
     def __cinit__(self, Splitter splitter, intp_t min_samples_split,
-                  intp_t min_samples_leaf, float64_t min_weight_leaf,
+                  intp_t min_samples_leaf, intp_t min_observed_leaf, float64_t min_weight_leaf,
                   intp_t max_depth, float64_t min_impurity_decrease):
         self.splitter = splitter
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
+        self.min_observed_leaf = min_observed_leaf
         self.min_weight_leaf = min_weight_leaf
         self.max_depth = max_depth
         self.min_impurity_decrease = min_impurity_decrease
@@ -190,6 +191,7 @@ cdef class DepthFirstTreeBuilder(TreeBuilder):
         cdef Splitter splitter = self.splitter
         cdef intp_t max_depth = self.max_depth
         cdef intp_t min_samples_leaf = self.min_samples_leaf
+        cdef intp_t min_observed_leaf = self.min_observed_leaf
         cdef float64_t min_weight_leaf = self.min_weight_leaf
         cdef intp_t min_samples_split = self.min_samples_split
         cdef float64_t min_impurity_decrease = self.min_impurity_decrease
@@ -258,6 +260,7 @@ cdef class DepthFirstTreeBuilder(TreeBuilder):
                 is_leaf = (depth >= max_depth or
                            n_node_samples < min_samples_split or
                            n_node_samples < 2 * min_samples_leaf or
+                           n_node_samples < 2 * min_observed_leaf or
                            weighted_n_node_samples < 2 * min_weight_leaf)
 
                 if first:
@@ -411,12 +414,13 @@ cdef class BestFirstTreeBuilder(TreeBuilder):
     cdef intp_t max_leaf_nodes
 
     def __cinit__(self, Splitter splitter, intp_t min_samples_split,
-                  intp_t min_samples_leaf,  min_weight_leaf,
+                  intp_t min_samples_leaf,  intp_t min_observed_leaf, min_weight_leaf,
                   intp_t max_depth, intp_t max_leaf_nodes,
                   float64_t min_impurity_decrease):
         self.splitter = splitter
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
+        self.min_observed_leaf = min_observed_leaf
         self.min_weight_leaf = min_weight_leaf
         self.max_depth = max_depth
         self.max_leaf_nodes = max_leaf_nodes
@@ -620,6 +624,7 @@ cdef class BestFirstTreeBuilder(TreeBuilder):
         is_leaf = (depth >= self.max_depth or
                    n_node_samples < self.min_samples_split or
                    n_node_samples < 2 * self.min_samples_leaf or
+                   n_node_samples < 2 * self.min_observed_leaf or
                    weighted_n_node_samples < 2 * self.min_weight_leaf or
                    impurity <= EPSILON  # impurity == 0 with tolerance
                    )

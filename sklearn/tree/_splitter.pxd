@@ -38,6 +38,7 @@ cdef class Splitter:
     cdef public Criterion criterion      # Impurity criterion
     cdef public intp_t max_features      # Number of features to test
     cdef public intp_t min_samples_leaf  # Min samples in a leaf
+    cdef public intp_t min_observed_leaf  # Min observed in a leaf
     cdef public float64_t min_weight_leaf   # Minimum weight in a leaf
 
     cdef object random_state             # Random state
